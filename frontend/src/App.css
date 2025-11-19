@@ -1,0 +1,4 @@
+/* Remove default styling to allow component-specific styles to take precedence */
+.App {
+  text-align: center;
+}
