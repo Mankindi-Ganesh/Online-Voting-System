@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import AdminLogin from "./components/AdminLogin";
-import Dashboard from "./pages/Dashboard";
+import React from "react";
 
 const App = () => {
-  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("adminToken"));
-
-  return loggedIn ? <Dashboard /> : <AdminLogin onLogin={() => setLoggedIn(true)} />;
+  return (
+    <div className="text-3xl text-blue-600 font-bold">
+      Tailwind Working!
+    </div>
+  );
 };
 
 export default App;
