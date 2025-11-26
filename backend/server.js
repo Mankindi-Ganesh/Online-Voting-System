@@ -4,6 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const voterRoutes = require("./routes/authRoutes.js");
+const adminRoute = require("./routes/adminRoutes.js");
 
 const app = express();
 
@@ -18,6 +19,7 @@ mongoose
 
 // Routes
 app.use("/api", voterRoutes);
+app.use("/api", adminRoute);
 
 // Test Route
 app.get("/", (req, res) => {

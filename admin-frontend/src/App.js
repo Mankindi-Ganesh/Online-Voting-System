@@ -1,11 +1,16 @@
-import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AdminLogin from "./pages/adminlogin";
+import AdminDashboard from "./pages/admindashboard";
 
-const App = () => {
+function App() {
   return (
-    <div className="text-3xl text-blue-600 font-bold">
-      Tailwind Working!
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
