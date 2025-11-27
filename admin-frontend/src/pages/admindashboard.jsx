@@ -13,7 +13,7 @@ export default function AdminDashboard() {
   async function addCandidate(candidate) {
     // Persist candidate to backend and update local state from saved record
     try {
-      const res = await axios.post("http://localhost:5000/api/candidates", candidate);
+      const res = await axios.post("http://localhost:5000/api/candidates/add", candidate);
       const saved = res.data;
       setCandidates((prev) => [...prev, { id: saved._id || Date.now(), votes: saved.votes ?? 0, ...saved }]);
       setView("list");

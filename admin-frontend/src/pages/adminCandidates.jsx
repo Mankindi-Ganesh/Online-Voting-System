@@ -6,17 +6,20 @@ function AdminCandidates() {
   const [candidates, setCandidates] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/candidates")
+    axios.get("http://localhost:5000/api/candidates/list")
       .then(res => setCandidates(res.data))
       .catch(err => console.error(err));
   }, []);
 
   const handleAddCandidate = async (candidate) => {
     try {
-      const res = await axios.post("http://localhost:5000/api/candidates", candidate);
-      setCandidates([...candidates, res.data]); // update UI
+      const res = await axios.post("http://localhost:5000/api/candidates/add", candidate);
+
+      // res.data = { message: "...", candidate: {...} }
+      setCandidates([...candidates, res.data.candidate]);
+      
     } catch (err) {
-      console.error(err);
+      console.error("Failed to add candidate:", err);
       alert("Failed to add candidate");
     }
   };

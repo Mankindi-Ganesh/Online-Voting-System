@@ -17,4 +17,5 @@ const candidateSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model("candidateslist", candidateSchema, "candidateslist");
+// Use the EXACT collection name: candidatelist
+module.exports = mongoose.model("Candidate", candidateSchema, "candidateslist");

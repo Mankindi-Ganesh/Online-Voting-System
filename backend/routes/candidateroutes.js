@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const Candidate = require("../models/candidateModel");
+const Candidate = require("../models/Candidate");
 
-// ----------------------------
-// ADD NEW CANDIDATE
-// ----------------------------
+// Add Candidate
 router.post("/add", async (req, res) => {
   try {
     const { fullName, party } = req.body;
@@ -16,15 +14,16 @@ router.post("/add", async (req, res) => {
     const newCandidate = new Candidate({ fullName, party });
     await newCandidate.save();
 
-    res.status(201).json({ message: "Candidate added successfully", candidate: newCandidate });
+    res.status(201).json({
+      message: "Candidate added successfully",
+      candidate: newCandidate,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
 });
 
-// ----------------------------
-// GET ALL CANDIDATES
-// ----------------------------
+// Get all candidates
 router.get("/list", async (req, res) => {
   try {
     const candidates = await Candidate.find();
@@ -34,16 +33,12 @@ router.get("/list", async (req, res) => {
   }
 });
 
-// ----------------------------
-// VOTE FOR A CANDIDATE
-// ----------------------------
+// Vote for candidate
 router.post("/vote/:id", async (req, res) => {
   try {
-    const id = req.params.id;
-
     const updatedCandidate = await Candidate.findByIdAndUpdate(
-      id,
-      { $inc: { votes: 1 } }, // increase vote by 1
+      req.params.id,
+      { $inc: { votes: 1 } },
       { new: true }
     );
 
@@ -51,11 +46,7 @@ router.post("/vote/:id", async (req, res) => {
       return res.status(404).json({ message: "Candidate not found" });
     }
 
-    res.status(200).json({
-      message: "Vote added successfully",
-      candidate: updatedCandidate
-    });
-
+    res.json({ message: "Vote added", candidate: updatedCandidate });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }

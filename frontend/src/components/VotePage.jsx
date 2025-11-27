@@ -6,7 +6,7 @@ function VotePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/candidates")
+    axios.get("http://localhost:5000/api/candidates/list")
       .then(res => {
         setCandidates(res.data);
         setLoading(false);
