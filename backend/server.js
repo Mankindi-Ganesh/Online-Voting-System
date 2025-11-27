@@ -5,13 +5,13 @@ require("dotenv").config();
 
 const voterRoutes = require("./routes/authRoutes.js");
 const adminRoute = require("./routes/adminRoutes.js");
-
+const candidateRoutes = require("./routes/candidateroutes.js");
 const app = express();
 
 app.use(express.json());
 app.use(cors());
 
-// MongoDB connection (NO extra options)
+// MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
@@ -20,8 +20,8 @@ mongoose
 // Routes
 app.use("/api", voterRoutes);
 app.use("/api", adminRoute);
+app.use("/api/candidates", candidateRoutes);
 
-// Test Route
 app.get("/", (req, res) => {
   res.send("Backend running successfully ✔");
 });

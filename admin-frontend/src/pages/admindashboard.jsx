@@ -1,5 +1,6 @@
 // ...existing code...
 import { useState } from "react";
+import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import CandidatesList from "./candidatesList";     // ensure file is named candidatesList.jsx
 import CandidateForm from "./candidateForm";       // ensure file is named candidateForm.jsx
@@ -7,14 +8,22 @@ import VotingResults from "./votingResults";        // ensure file is named voti
 
 export default function AdminDashboard() {
   const [view, setView] = useState("list");
-  const [candidates, setCandidates] = useState([
-    { id: 1, name: "Alice Johnson", party: "Green Party", votes: 120 },
-    { id: 2, name: "Bob Smith", party: "Blue Party", votes: 85 },
-  ]);
+  const [candidates, setCandidates] = useState([]);
 
-  function addCandidate(candidate) {
-    setCandidates((prev) => [...prev, { id: Date.now(), votes: 0, ...candidate }]);
-    setView("list");
+  async function addCandidate(candidate) {
+    // Persist candidate to backend and update local state from saved record
+    try {
+      const res = await axios.post("http://localhost:5000/api/candidates", candidate);
+      const saved = res.data;
+      setCandidates((prev) => [...prev, { id: saved._id || Date.now(), votes: saved.votes ?? 0, ...saved }]);
+      setView("list");
+    } catch (err) {
+      console.error("Failed to add candidate to backend:", err);
+      // Fallback: still add locally so admin can continue
+      setCandidates((prev) => [...prev, { id: Date.now(), votes: 0, ...candidate }]);
+      setView("list");
+      alert("Failed to persist candidate to server — added locally only.");
+    }
   }
 
   function deleteCandidate(id) {

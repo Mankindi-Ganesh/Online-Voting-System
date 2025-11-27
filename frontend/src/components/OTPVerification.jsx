@@ -18,7 +18,7 @@ export default function OTPVerificationPage() {
 
       if (res.data.success) {
         alert(res.data.message || "OTP verified successfully");
-        navigate("/candidates-list");
+        navigate("/vote-page"); // proceed to voting page
       } else {
         // handle backend message if OTP invalid
         alert(res.data.message || "Invalid OTP");

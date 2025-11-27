@@ -1,14 +1,15 @@
-// ...existing code...
 import React, { useState } from "react";
 
- function candidateForm({ onAdd }) {
+function CandidateForm({ onAdd }) {
   const [name, setName] = useState("");
   const [party, setParty] = useState("");
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim() || !party.trim()) return;
-    onAdd({ name: name.trim(), party: party.trim() });
+
+    onAdd({ fullName: name.trim(), party: party.trim() });
+
     setName("");
     setParty("");
   }
@@ -16,11 +17,12 @@ import React, { useState } from "react";
   return (
     <div className="max-w-md">
       <h2 className="text-xl font-semibold mb-4">Add Candidate</h2>
+
       <form onSubmit={handleSubmit} className="space-y-4 bg-gray-50 p-4 rounded border">
         <div>
           <label className="block text-sm text-gray-600">Full name</label>
           <input
-            value={name}
+            value={name}          // <-- FIXED
             onChange={(e) => setName(e.target.value)}
             className="w-full border p-2 rounded mt-1"
             placeholder="e.g. Jane Doe"
@@ -54,5 +56,4 @@ import React, { useState } from "react";
   );
 }
 
-export default candidateForm;
- // ...existing code...
+export default CandidateForm;
