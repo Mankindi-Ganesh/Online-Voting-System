@@ -2,7 +2,7 @@
 import { useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
-import CandidatesList from "./candidatesList";     // ensure file is named candidatesList.jsx
+import CandidatesList from "./adminCandidates";     // ensure file is named candidatesList.jsx
 import CandidateForm from "./candidateForm";       // ensure file is named candidateForm.jsx
 import VotingResults from "./votingResults";        // ensure file is named votingResults.jsx and export default
 

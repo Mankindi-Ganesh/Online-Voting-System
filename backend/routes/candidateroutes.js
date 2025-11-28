@@ -28,6 +28,21 @@ router.get("/list", async (req, res) => {
   }
 });
 
+// for deleting a candidate if admin wants to remove one
+router.delete("/delete/:id", async (req, res) => {
+  try {
+    const candidateId = req.params.id;
+    const deleted = await Candidate.findByIdAndDelete(candidateId);
+    
+    if (!deleted) return res.status(404).json({ message: "Candidate not found" });
+    
+    res.json({ message: "Candidate deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+
 // Vote for candidate - requires voterId in body; prevents double-vote
 router.post("/vote/:id", async (req, res) => {
   try {
