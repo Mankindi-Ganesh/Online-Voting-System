@@ -1,74 +1,91 @@
 const express = require("express");
 const router = express.Router();
 const Voter = require("../models/Voter");
+const crypto = require("crypto");
 
-// =============================
-// SEND OTP & CHECK VOTER
-// =============================
+const HMAC_SECRET = process.env.OTP_HMAC_SECRET || "change_me";
+const otpStore = new Map();
+
+function generateOtp(length = 6) {
+  return String(Math.floor(Math.random() * Math.pow(10, length))).padStart(length, "0");
+}
+function hashOtp(phone, otp) {
+  return crypto.createHmac("sha256", HMAC_SECRET).update(`${phone}:${otp}`).digest("hex");
+}
+
+/**
+ * POST /api/send-otp
+ * body: { phone, pin? }
+ * returns { success, message, otp? } (otp only in non-production for dev)
+ */
 router.post("/send-otp", async (req, res) => {
-  let pin = String(req.body.pin).trim();
-  let phone = String(req.body.phone).trim();
-
-  console.log("🔍 Incoming Request (PIN + Phone):", { pin, phone });
-
   try {
-    // Check voter in DB
-    const voter = await Voter.findOne({ pin, phone });
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: "phone required" });
 
-    console.log("📌 Voter Found in DB:", voter);
+    const otp = generateOtp(6);
+    const hashed = hashOtp(phone, otp);
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
-    if (!voter) {
-      console.log("❌ No voter found → Not eligible");
-      return res.status(400).json({ message: "Not eligible to vote" });
-    }
+    // store hashed value + raw otp (raw otp only for dev/testing store)
+    otpStore.set(phone, { hashed, otp, expiresAt });
 
-    if (voter.hasVoted) {
-      console.log("⚠️ Voter already voted");
-      return res.status(400).json({ message: "You have already voted" });
-    }
+    // send SMS here in production (Twilio, etc). For dev we log and return otp
+    console.log(`OTP for ${phone}: ${otp}`);
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    voter.otp = otp;
-    await voter.save();
+    const payload = { success: true, message: "OTP sent" };
+    if (process.env.NODE_ENV !== "production") payload.otp = otp; // dev-only
 
-    console.log(`📨 OTP Generated for ${phone}: ${otp}`);
-
-    res.json({ message: "OTP sent successfully", otp });
+    return res.json(payload);
   } catch (err) {
-    console.error("❌ Server Error in /send-otp:", err.message);
-    res.status(500).json({ message: err.message });
+    console.error("send-otp error:", err);
+    return res.status(500).json({ success: false, message: "server error" });
   }
 });
 
-// =============================
-// VERIFY OTP
-// =============================
+/**
+ * POST /api/verify-otp
+ * body: { phone, otp }
+ * returns { success, voterId, hasVoted }
+ */
 router.post("/verify-otp", async (req, res) => {
-  let otp = String(req.body.otp).trim();
-
-  console.log("🔍 Incoming OTP:", otp);
-
   try {
-    const voter = await Voter.findOne({ otp });
+    const { phone, otp } = req.body;
+    if (!phone || !otp) return res.status(400).json({ success: false, message: "phone and otp required" });
 
-    console.log("📌 OTP Matched Voter:", voter);
+    const record = otpStore.get(phone);
+    if (!record) return res.status(400).json({ success: false, message: "otp not found or expired" });
 
-    if (!voter) {
-      console.log("❌ Invalid OTP entered");
-      return res.status(400).json({ message: "Invalid OTP" });
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(phone);
+      return res.status(400).json({ success: false, message: "otp expired" });
     }
 
-    voter.hasVoted = true;
-    voter.otp = null;
-    await voter.save();
+    const hashedAttempt = hashOtp(phone, otp);
+    if (!crypto.timingSafeEqual(Buffer.from(hashedAttempt), Buffer.from(record.hashed))) {
+      return res.status(400).json({ success: false, message: "invalid otp" });
+    }
 
-    console.log("✅ Voter marked as voted");
+    // OTP valid -> find or create voter (do NOT set hasVoted here)
+    let voter = await Voter.findOne({ phone });
+    if (!voter) {
+      voter = new Voter({ phone }); // hasVoted defaults to false in model
+      await voter.save();
+    }
 
-    res.json({ success: true, message: "OTP verified successfully" });
+    // remove OTP after successful verification
+    otpStore.delete(phone);
+
+    return res.json({
+      success: true,
+      voterId: voter._id,
+      hasVoted: Boolean(voter.hasVoted),
+      message: "OTP verified",
+    });
   } catch (err) {
-    console.error("❌ Server Error in /verify-otp:", err.message);
-    res.status(500).json({ message: err.message });
+    console.error("verify-otp error:", err);
+    return res.status(500).json({ success: false, message: "server error" });
   }
 });
+
 module.exports = router;

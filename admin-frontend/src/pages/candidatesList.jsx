@@ -19,12 +19,12 @@ export default function candidatesList({ candidates = [], onDelete, onVote }) {
 
             <div className="flex items-center gap-3">
               <div className="text-sm text-gray-700">Votes: {c.votes}</div>
-              <button
+              {/* <button
                 onClick={() => onVote(c.id)}
                 className="px-3 py-1 bg-green-500 text-white rounded"
               >
                 + Vote
-              </button>
+              </button> */}
               <button
                 onClick={() => onDelete(c.id)}
                 className="px-3 py-1 bg-red-500 text-white rounded"

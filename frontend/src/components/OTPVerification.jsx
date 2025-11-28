@@ -1,34 +1,82 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function OTPVerificationPage() {
   const [otp, setOtp] = useState("");
-  const [message, setMessage] = useState(""); // for showing errors
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    async function init() {
+      const phone = localStorage.getItem("phone");
+      if (!phone) {
+        alert("Phone not found. Please register first.");
+        return navigate("/register");
+      }
+
+      // if register stored otp in localStorage (dev), use it and show popup
+      const storedOtp = localStorage.getItem("otp");
+      if (storedOtp) {
+        setOtp(storedOtp);
+        alert(`Your OTP (dev): ${storedOtp}`);
+        return;
+      }
+
+      // otherwise request a new OTP from backend (dev will return otp)
+      try {
+        const res = await axios.post("http://localhost:5000/api/send-otp", { phone });
+        if (res.data?.otp) {
+          localStorage.setItem("otp", res.data.otp);
+          setOtp(res.data.otp);
+          alert(`Your OTP (dev): ${res.data.otp}`);
+        } else {
+          setMessage(res.data?.message || "OTP sent");
+        }
+      } catch (err) {
+        console.error("Failed to send OTP:", err);
+        setMessage("Failed to send OTP. Try again.");
+      }
+    }
+    init();
+  }, [navigate]);
+
   const handleVerifyOTP = async () => {
-    if (!otp || otp.length !== 6) {
-      alert("Please enter a valid 6-digit OTP");
+    const phone = localStorage.getItem("phone");
+    const inputOtp = otp.trim();
+    if (!phone) {
+      alert("Phone number not found. Please register first.");
+      return navigate("/register");
+    }
+    if (!/^\d{6}$/.test(inputOtp)) {
+      alert("Enter a valid 6-digit OTP");
       return;
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/verify-otp", { otp });
-
-      if (res.data.success) {
+      const res = await axios.post("http://localhost:5000/api/verify-otp", { phone, otp: inputOtp });
+      if (res.data?.success) {
+        // store voter id for later actions
+        if (res.data.voterId) {
+          localStorage.setItem("voterId", res.data.voterId);
+        }
+        // remove raw otp after verification for security
+        localStorage.removeItem("otp");
         alert(res.data.message || "OTP verified successfully");
-        navigate("/vote-page"); // proceed to voting page
+        navigate("/vote-page");
       } else {
-        // handle backend message if OTP invalid
         alert(res.data.message || "Invalid OTP");
       }
     } catch (error) {
-      console.error("OTP verification error:", error);
-      const errMsg = error?.response?.data?.message || error.message || "OTP verification failed";
+      console.error("OTP verify error:", error);
+      const errMsg = error?.response?.data?.message || "OTP verification failed";
       alert(errMsg);
     }
   };
+
+  // ...existing JSX (input, Verify button wired to handleVerifyOTP) ...
+// ...existing code...
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white relative overflow-hidden">
