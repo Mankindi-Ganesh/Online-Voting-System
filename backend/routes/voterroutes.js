@@ -2,16 +2,29 @@ const express = require("express");
 const router = express.Router();
 const Voter = require("../models/Voter");
 
-// register a voter (creates a voter record and returns id) - minimal
+// register a voter (creates a voter record and returns id) - now requires phone
 router.post("/register", async (req, res) => {
   try {
-    const voter = new Voter({});
-    await voter.save();
+    const { phone, pin } = req.body;
+    if (!phone) return res.status(400).json({ error: "phone required" });
+
+    const normalizedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+
+    // atomic find-or-create so duplicates cannot cause errors
+    const voter = await Voter.findOneAndUpdate(
+      { phone: normalizedPhone },
+      { $setOnInsert: { phone: normalizedPhone, pin: pin || undefined, hasVoted: false } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
     res.status(201).json({ voterId: voter._id, hasVoted: voter.hasVoted });
   } catch (err) {
+    console.error("register error:", err);
     res.status(500).json({ error: "failed to register voter" });
   }
 });
+
+module.exports = router;
 
 // get voter status
 // Add this to authRoutes.js (or create voterRoutes.js)

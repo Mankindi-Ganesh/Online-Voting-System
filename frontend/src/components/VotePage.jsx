@@ -29,53 +29,60 @@ function VotePage() {
     init();
   }, []);
 
-  const handleVote = async (candidateId) => {
-    // get voterId from state or localStorage
-    const stored = voterId || localStorage.getItem("voterId");
+  // ...existing code...
+const handleVote = async (candidateId) => {
+  const stored = voterId || localStorage.getItem("voterId");
 
-    if (!stored) {
-      alert("You must verify your phone (OTP) before voting.");
-      return;
-    }
+  if (!stored) {
+    alert("You must verify your phone (OTP) before voting.");
+    return;
+  }
 
-    // validate voter status right before voting
-    try {
-      const status = await axios.get(`http://localhost:5000/api/voters/status/${stored}`);
-
-      if (status.data?.hasVoted) {
-        setHasVoted(true);
-        alert("You have already voted.");
-        return;
-      }
-    } catch (err) {
-      console.error("Voter status check failed:", err);
-      localStorage.removeItem("voterId");
-      alert("Session expired. Please register and verify again.");
-      return;
-    }
-
-    // submit vote
-    try {
-      const voteRes = await axios.post(
-        `http://localhost:5000/api/candidates/vote/${candidateId}`,
-        { voterId: stored }
-      );
-
-      console.log("Vote submitted:", voteRes.data);
-
-      // mark as voted
+  // validate voter status right before voting
+  try {
+    const status = await axios.get(`http://localhost:5000/api/voters/status/${stored}`);
+    if (status.data?.hasVoted) {
       setHasVoted(true);
-      alert("Vote submitted successfully!");
-
-      // refresh candidates to show updated vote count
-      const list = await axios.get("http://localhost:5000/api/candidates/list");
-      setCandidates(list.data || []);
-    } catch (err) {
-      console.error("Vote submission error:", err);
-      const msg = err?.response?.data?.message || "Voting failed";
-      alert(msg);
+      alert("You have already voted.");
+      return;
     }
-  };
+  } catch (err) {
+    console.error("Voter status check failed:", err);
+    if (err.response?.status >= 500) {
+      alert("Temporary server error. Please retry in a moment.");
+      return;
+    }
+    if (err.response?.status === 404) {
+      localStorage.removeItem("voterId");
+      alert("Session expired or account not found. Please register and verify again.");
+      return;
+    }
+    alert("Unable to verify voter. Please try again.");
+    return;
+  }
+
+  // submit vote with voterId in body
+  try {
+    const voteRes = await axios.post(
+      `http://localhost:5000/api/candidates/vote/${candidateId}`,
+      { voterId: stored }  // pass voterId here
+    );
+
+    console.log("Vote submitted:", voteRes.data);
+
+    setHasVoted(true);
+    alert("Vote submitted successfully!");
+
+    // refresh candidates to show updated vote count
+    const list = await axios.get("http://localhost:5000/api/candidates/list");
+    setCandidates(list.data || []);
+  } catch (err) {
+    console.error("Vote submission error:", err);
+    const msg = err?.response?.data?.message || "Voting failed";
+    alert(msg);
+  }
+};
+// ...existing code...
 
   if (loading) return <p className="text-center p-6">Loading candidates...</p>;
 

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const voterSchema = new mongoose.Schema({
   name: String,
-  pin: { type: String }, // unique PIN
+  pin: { type: String ,unique: true, sparse: true}, // unique PIN
   phone: { type: String, unique: true ,sparse: true}, // unique phone number String,
   otp: String,
   // you can expand with phone/email/name later
