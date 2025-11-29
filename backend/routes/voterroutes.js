@@ -8,7 +8,12 @@ router.post("/register", async (req, res) => {
     const { phone, pin } = req.body;
     if (!phone) return res.status(400).json({ error: "phone required" });
 
-    const normalizedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      const normalizedPhone = normalizePhone(phone); // 🔥 only 10 digits
+
+    if (normalizedPhone.length !== 10) {
+      return res.status(400).json({ error: "Phone must be 10 digits" });
+    }
+
 
     // atomic find-or-create so duplicates cannot cause errors
     const voter = await Voter.findOneAndUpdate(

@@ -26,12 +26,12 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       // const normalizedPhone = phone.startsWith("+") ? phone : `+${phone}`;
-      const cleanPhone =phone.trim();
+      const Phone =phone.trim();
       // store phone so OTP page can use it
-      localStorage.setItem("phone", cleanPhone);
+      localStorage.setItem("phone", Phone);
 
       const res = await axios.post("http://localhost:5000/api/send-otp", {
-        phone: cleanPhone,
+        phone: Phone,
         pin,
       });
 
