@@ -1,3 +1,4 @@
+// ...existing code...
 const express = require("express");
 const router = express.Router();
 const Voter = require("../models/Voter");
@@ -55,25 +56,30 @@ router.post("/verify-otp", async (req, res) => {
 
     const record = otpStore.get(phone);
     if (!record) return res.status(400).json({ success: false, message: "otp not found or expired" });
-
     if (Date.now() > record.expiresAt) {
       otpStore.delete(phone);
       return res.status(400).json({ success: false, message: "otp expired" });
     }
 
+    // compare HMACs safely (both hex)
     const hashedAttempt = hashOtp(phone, otp);
-    if (!crypto.timingSafeEqual(Buffer.from(hashedAttempt), Buffer.from(record.hashed))) {
+    try {
+      const a = Buffer.from(hashedAttempt, "hex");
+      const b = Buffer.from(record.hashed, "hex");
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        return res.status(400).json({ success: false, message: "invalid otp" });
+      }
+    } catch (cmpErr) {
       return res.status(400).json({ success: false, message: "invalid otp" });
     }
+     // atomic find-or-create (upsert) to avoid duplicate-key races
+    const voter = await Voter.findOneAndUpdate(
+      { phone },
+      { $setOnInsert: { phone, hasVoted: false } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    // OTP valid -> find or create voter (do NOT set hasVoted here)
-    let voter = await Voter.findOne({ phone });
-    if (!voter) {
-      voter = new Voter({ phone }); // hasVoted defaults to false in model
-      await voter.save();
-    }
-
-    // remove OTP after successful verification
+    // clear OTP after successful verification
     otpStore.delete(phone);
 
     return res.json({
@@ -83,9 +89,22 @@ router.post("/verify-otp", async (req, res) => {
       message: "OTP verified",
     });
   } catch (err) {
-    console.error("verify-otp error:", err);
+    console.error("verify-otp unexpected error:", err);
     return res.status(500).json({ success: false, message: "server error" });
   }
 });
+
+// Voter status route used by frontend to check hasVoted
+router.get("/voters/status/:id", async (req, res) => {
+  try {
+    const voter = await Voter.findById(req.params.id).lean();
+    if (!voter) return res.status(404).json({ success: false, message: "voter not found" });
+    return res.json({ success: true, voterId: voter._id, hasVoted: Boolean(voter.hasVoted), votedFor: voter.votedFor || null });
+  } catch (err) {
+    console.error("voter status error:", err);
+    return res.status(500).json({ success: false, message: "server error" });
+  }
+});
+
 
 module.exports = router;

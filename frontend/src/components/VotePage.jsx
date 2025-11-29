@@ -1,4 +1,3 @@
-// ...existing code...
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -8,39 +7,21 @@ function VotePage() {
   const [voterId, setVoterId] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
 
-  // helper: safely parse hasVoted coming from backend
-  const parseHasVoted = (value) => {
-    return value === true || value === "true" || value === 1 || value === "1";
-  };
-
   useEffect(() => {
     async function init() {
       try {
-        // 1) Load candidates
-        const res = await axios.get(
-          "http://localhost:5000/api/candidates/list"
-        );
+        // 1) Always load candidates from backend
+        const res = await axios.get("http://localhost:5000/api/candidates/list");
         setCandidates(res.data || []);
 
-        // 2) If voterId is stored, validate it and get status
+        // 2) Get voterId from localStorage (set by OTP verification page)
         const stored = localStorage.getItem("voterId");
         if (stored) {
-          try {
-            const status = await axios.get(
-              `http://localhost:5000/api/voters/status/${stored}`
-            );
-
-            setVoterId(stored);
-            setHasVoted(parseHasVoted(status.data?.hasVoted));
-          } catch (err) {
-            console.warn("Stored voterId invalid:", err?.response?.data || err.message);
-            localStorage.removeItem("voterId");
-            setVoterId(null);
-            setHasVoted(false);
-          }
+          setVoterId(stored);
+          // do NOT call /voters/status here — only call it right before voting
         }
       } catch (err) {
-        console.error("Failed to load candidates or validate voter:", err);
+        console.error("Failed to load candidates:", err);
       } finally {
         setLoading(false);
       }
@@ -48,92 +29,97 @@ function VotePage() {
     init();
   }, []);
 
-  const handleVote = async (id) => {
-    // re-check localStorage for voter id
-    let stored =
-      voterId ||
-      localStorage.getItem("voterId") ||
-      localStorage.getItem("voter_id") ||
-      localStorage.getItem("voter");
+  const handleVote = async (candidateId) => {
+    // get voterId from state or localStorage
+    const stored = voterId || localStorage.getItem("voterId");
 
     if (!stored) {
       alert("You must verify your phone (OTP) before voting.");
       return;
     }
 
-    // validate against backend just before voting
+    // validate voter status right before voting
     try {
-      const status = await axios.get(
-        `http://localhost:5000/api/voters/status/${stored}`
-      );
-      const alreadyVoted = parseHasVoted(status.data?.hasVoted);
+      const status = await axios.get(`http://localhost:5000/api/voters/status/${stored}`);
 
-      if (alreadyVoted) {
+      if (status.data?.hasVoted) {
         setHasVoted(true);
-        setVoterId(stored);
         alert("You have already voted.");
         return;
       }
-
-      // voter is valid and has not voted yet
-      setVoterId(stored);
-      setHasVoted(false);
     } catch (err) {
-      console.error("Status check failed:", err);
+      console.error("Voter status check failed:", err);
       localStorage.removeItem("voterId");
-      setVoterId(null);
-      setHasVoted(false);
-      alert("You must verify your phone (OTP) before voting.");
+      alert("Session expired. Please register and verify again.");
       return;
     }
 
-    // now submit vote
+    // submit vote
     try {
-      await axios.post(
-        `http://localhost:5000/api/candidates/vote/${id}`,
+      const voteRes = await axios.post(
+        `http://localhost:5000/api/candidates/vote/${candidateId}`,
         { voterId: stored }
       );
 
-      setHasVoted(true);
-      alert("Vote submitted!");
+      console.log("Vote submitted:", voteRes.data);
 
-      // refresh results
+      // mark as voted
+      setHasVoted(true);
+      alert("Vote submitted successfully!");
+
+      // refresh candidates to show updated vote count
       const list = await axios.get("http://localhost:5000/api/candidates/list");
       setCandidates(list.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Vote submission error:", err);
       const msg = err?.response?.data?.message || "Voting failed";
       alert(msg);
     }
   };
 
-  if (loading) return <p>Loading candidates...</p>;
+  if (loading) return <p className="text-center p-6">Loading candidates...</p>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Vote for a Candidate</h1>
+    <div className="p-6 bg-white rounded shadow">
+      <h1 className="text-2xl font-bold mb-2">Vote for a Candidate</h1>
+      <p className="text-sm text-gray-600 mb-6">Select your preferred candidate below</p>
 
-      <ul className="space-y-4">
-        {candidates.map((c) => (
-          <li
-            key={c._id || c.id}
-            className="border p-4 rounded flex justify-between items-center"
-          >
-            <div>
-              <p className="text-lg font-semibold">{c.fullName}</p>
-              <p className="text-sm text-gray-700">{c.party}</p>
-            </div>
-
-            <button
-              onClick={() => handleVote(c._id || c.id)}
-              className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
-              disabled={hasVoted}
+      {candidates.length === 0 ? (
+        <p className="text-gray-500">No candidates available.</p>
+      ) : (
+        <div className="space-y-4">
+          {candidates.map((c) => (
+            <div
+              key={c._id || c.id}
+              className="flex items-center justify-between bg-gray-50 p-4 rounded border border-gray-200 hover:shadow-md transition-shadow"
             >
-              {hasVoted ? "Voted" : "Vote"}
-            </button>
-          </li>
-        ))}
-      </ul>
+              <div>
+                <p className="text-lg font-semibold text-gray-900">{c.fullName}</p>
+                <p className="text-sm text-gray-600">{c.party}</p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-gray-700">{c.votes || 0}</p>
+                  <p className="text-xs text-gray-500">votes</p>
+                </div>
+
+                <button
+                  onClick={() => handleVote(c._id || c.id)}
+                  disabled={hasVoted}
+                  className={`px-4 py-2 rounded font-semibold transition-all ${
+                    hasVoted
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  {hasVoted ? "✓ Voted" : "Vote"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

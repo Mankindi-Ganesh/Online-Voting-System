@@ -14,14 +14,31 @@ router.post("/register", async (req, res) => {
 });
 
 // get voter status
-router.get("/status/:id", async (req, res) => {
-  try {
-    const voter = await Voter.findById(req.params.id);
-    if (!voter) return res.status(404).json({ error: "voter not found" });
-    res.json({ voterId: voter._id, hasVoted: voter.hasVoted, votedFor: voter.votedFor });
-  } catch (err) {
-    res.status(500).json({ error: "server error" });
-  }
-});
+// Add this to authRoutes.js (or create voterRoutes.js)
+
+/**
+ * GET /api/voters/status/:id
+ * Returns voter status including hasVoted flag
+ */
+// router.get("/status/:id", async (req, res) => {
+//   try {
+//     const voterId = req.params.id;
+    
+//     const voter = await Voter.findById(voterId);
+//     if (!voter) {
+//       return res.status(404).json({ success: false, message: "Voter not found" });
+//     }
+
+//     res.json({
+//       success: true,
+//       voterId: voter._id,
+//       hasVoted: Boolean(voter.hasVoted),
+//       votedFor: voter.votedFor || null,
+//     });
+//   } catch (err) {
+//     console.error("Voter status error:", err);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
 
 module.exports = router;

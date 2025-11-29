@@ -41,20 +41,19 @@ router.delete("/delete/:id", async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 });
-
-
 // Vote for candidate - requires voterId in body; prevents double-vote
 router.post("/vote/:id", async (req, res) => {
   try {
     const candidateId = req.params.id;
     const { voterId } = req.body;
-
     if (!voterId) return res.status(400).json({ message: "voterId is required" });
 
+    // load voter
     const voter = await Voter.findById(voterId);
     if (!voter) return res.status(404).json({ message: "Voter not found" });
     if (voter.hasVoted) return res.status(400).json({ message: "Voter has already voted" });
 
+    // increment candidate votes atomically
     const updatedCandidate = await Candidate.findByIdAndUpdate(
       candidateId,
       { $inc: { votes: 1 } },
@@ -63,14 +62,16 @@ router.post("/vote/:id", async (req, res) => {
 
     if (!updatedCandidate) return res.status(404).json({ message: "Candidate not found" });
 
+    // mark voter as voted
     voter.hasVoted = true;
     voter.votedFor = updatedCandidate._id;
     voter.votedAt = new Date();
     await voter.save();
 
-    res.json({ message: "Vote added", candidate: updatedCandidate, voter });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    return res.json({ message: "Vote recorded", candidate: updatedCandidate, voterId: voter._id });
+  } catch (err) {
+    console.error("vote error:", err);
+    return res.status(500).json({ message: "server error" });
   }
 });
 
