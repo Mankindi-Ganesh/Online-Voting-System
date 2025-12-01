@@ -107,8 +107,8 @@ const handleVote = async (candidateId) => {
 
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-700">{c.votes || 0}</p>
-                  <p className="text-xs text-gray-500">votes</p>
+                  <p className="text-sm font-semibold text-gray-700"></p>
+                  <p className="text-xs text-gray-500"></p>
                 </div>
 
                 <button
