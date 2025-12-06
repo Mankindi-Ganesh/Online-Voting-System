@@ -3,30 +3,43 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
-const voterRoutes = require("./routes/authRoutes.js");
-const adminRoute = require("./routes/adminRoutes.js");
-const candidateRoutes = require("./routes/candidateroutes.js");
+const candidateRoutes = require("./routes/candidateroutes");
+const voterRoutes = require("./routes/authRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+
+const path = require("path");
+
 const app = express();
 
-app.use(express.json());
+// -----------------------------
+// MIDDLEWARES
+// -----------------------------
 app.use(cors());
+app.use(express.json());
 
-// MongoDB connection
+// Serve uploaded images statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// -----------------------------
+// ROUTES
+// -----------------------------
+app.use("/api/candidates", candidateRoutes);
+app.use("/api/voters", voterRoutes);
+app.use("/api", adminRoutes);
+
+// -----------------------------
+// MONGO DB CONNECTION
+// -----------------------------
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("❌ MongoDB Error:", err));
 
-// Routes
-app.use("/api", voterRoutes);
-app.use("/api", adminRoute);
-app.use("/api/candidates", candidateRoutes);
-
-app.get("/", (req, res) => {
-  res.send("Backend running successfully ✔");
-});
-
+// -----------------------------
+// SERVER START
+// -----------------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-);
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});

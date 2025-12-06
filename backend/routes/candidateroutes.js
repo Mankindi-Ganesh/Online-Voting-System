@@ -2,85 +2,124 @@ const express = require("express");
 const router = express.Router();
 const Candidate = require("../models/Candidate");
 const Voter = require("../models/Voter");
+const upload = require("../middleware/multer");
 
-// Add Candidate
-router.post("/add", async (req, res) => {
-  try {
-    const { fullName, party } = req.body;
-    if (!fullName || !party) return res.status(400).json({ message: "All fields are required" });
+// -------------------------------
+// ADD CANDIDATE
+// -------------------------------
+router.post(
+  "/add",
+  upload.fields([
+    { name: "candidatePhoto", maxCount: 1 },
+    { name: "partyLogo", maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const { fullName, party } = req.body;
 
-    const newCandidate = new Candidate({ fullName, party });
-    await newCandidate.save();
+      if (!fullName || !party) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
 
-    res.status(201).json({ message: "Candidate added successfully", candidate: newCandidate });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+      // file paths from multer
+      const candidatePhoto = req.files?.candidatePhoto
+        ? req.files.candidatePhoto[0].path.replace(/\\/g, "/")
+        : null;
+
+      const partyLogo = req.files?.partyLogo
+        ? req.files.partyLogo[0].path.replace(/\\/g, "/")
+        : null;
+
+      const newCandidate = new Candidate({
+        fullName,
+        party,
+        candidatePhoto,
+        partySymbol: partyLogo, // store partySymbol field
+      });
+
+      await newCandidate.save();
+
+      res.status(201).json({
+        message: "Candidate added successfully",
+        candidate: newCandidate,
+      });
+    } catch (error) {
+      console.error("Add candidate error:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
   }
-});
+);
 
-// Get all candidates
+// -------------------------------
+// GET ALL CANDIDATES
+// -------------------------------
 router.get("/list", async (req, res) => {
   try {
     const candidates = await Candidate.find();
     res.status(200).json(candidates);
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Get candidates error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Delete a candidate
+// -------------------------------
+// DELETE A CANDIDATE
+// -------------------------------
 router.delete("/delete/:id", async (req, res) => {
   try {
     const candidateId = req.params.id;
     const deleted = await Candidate.findByIdAndDelete(candidateId);
-    
-    if (!deleted) return res.status(404).json({ message: "Candidate not found" });
-    
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Candidate not found" });
+    }
+
     res.json({ message: "Candidate deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Delete candidate error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Vote for candidate - requires voterId in body; prevents double-vote
+// -------------------------------
+// VOTE FOR A CANDIDATE
+// -------------------------------
 router.post("/vote/:id", async (req, res) => {
   try {
     const candidateId = req.params.id;
     const { voterId } = req.body;
 
-    if (!voterId) return res.status(400).json({ message: "voterId is required" });
+    if (!voterId) {
+      return res.status(400).json({ message: "voterId is required" });
+    }
 
-    // FIND existing voter by voterId (do NOT create new voter)
     const voter = await Voter.findById(voterId);
     if (!voter) return res.status(404).json({ message: "Voter not found" });
-    if (voter.hasVoted) return res.status(400).json({ message: "Voter has already voted" });
+    if (voter.hasVoted) return res.status(400).json({ message: "Voter already voted" });
 
-    // increment candidate votes
     const updatedCandidate = await Candidate.findByIdAndUpdate(
       candidateId,
       { $inc: { votes: 1 } },
       { new: true }
     );
 
-    if (!updatedCandidate) return res.status(404).json({ message: "Candidate not found" });
+    if (!updatedCandidate) {
+      return res.status(404).json({ message: "Candidate not found" });
+    }
 
-    // UPDATE the existing voter record (do NOT create new one)
     voter.hasVoted = true;
     voter.votedFor = updatedCandidate._id;
     voter.votedAt = new Date();
-    await voter.save(); // saves the updated voter record
-
-    console.log(`Vote recorded: voter ${voterId} voted for candidate ${candidateId}`);
+    await voter.save();
 
     res.json({
-      message: "Vote recorded",
-      voterId: voter._id,
-      hasVoted: voter.hasVoted,
+      message: "Vote recorded successfully",
       candidate: updatedCandidate,
     });
   } catch (error) {
-    console.error("vote error:", error);
-    res.status(500).json({ message: "Server error", error });
+    console.error("Vote error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 

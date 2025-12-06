@@ -11,11 +11,21 @@ const candidateSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+
+  candidatePhoto: {
+    type: String,  
+    required: true,
+  },
+
+  partySymbol: {
+    type: String, 
+    required: true,
+  },
+
   votes: {
     type: Number,
     default: 0,
   }
 });
 
-// Use the EXACT collection name: candidatelist
 module.exports = mongoose.model("Candidate", candidateSchema, "candidateslist");
