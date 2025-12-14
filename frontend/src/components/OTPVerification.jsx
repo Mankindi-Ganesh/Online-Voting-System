@@ -25,7 +25,7 @@ export default function OTPVerificationPage() {
 
       // otherwise request a new OTP from backend (dev will return otp)
       try {
-        const res = await axios.post("http://localhost:5000/api/send-otp", { phone });
+        const res = await axios.post("http://localhost:5000/api/auth/send-otp", { phone });
         if (res.data?.otp) {
           localStorage.setItem("otp", res.data.otp);
           setOtp(res.data.otp);
@@ -54,7 +54,7 @@ export default function OTPVerificationPage() {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/verify-otp", { phone, otp: inputOtp });
+      const res = await axios.post("http://localhost:5000/api/auth/verify-otp", { phone, otp: inputOtp });
       if (res.data?.success) {
         // store voter id for later actions
         if (res.data.voterId) {

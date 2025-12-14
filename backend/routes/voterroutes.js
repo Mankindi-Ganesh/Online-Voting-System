@@ -28,9 +28,33 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ error: "failed to register voter" });
   }
 });
+// ================= VOTER STATUS =================
+// GET /api/status/:id
+router.get("/status/:id", async (req, res) => {
+  try {
+    const voter = await Voter.findById(req.params.id).lean();
 
-module.exports = router;
+    if (!voter) {
+      return res.status(404).json({
+        success: false,
+        message: "Voter not found",
+      });
+    }
 
+    return res.json({
+      success: true,
+      voterId: voter._id,
+      hasVoted: Boolean(voter.hasVoted),
+      votedFor: voter.votedFor || null,
+    });
+  } catch (err) {
+    console.error("Voter status error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
 // get voter status
 // Add this to authRoutes.js (or create voterRoutes.js)
 

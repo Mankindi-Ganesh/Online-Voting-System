@@ -30,7 +30,7 @@ export default function RegisterPage() {
       // store phone so OTP page can use it
       localStorage.setItem("phone", Phone);
 
-      const res = await axios.post("http://localhost:5000/api/send-otp", {
+      const res = await axios.post("http://localhost:5000/api/auth/send-otp", {
         phone: Phone,
         pin,
       });

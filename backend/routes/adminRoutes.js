@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-router.post("/admin/login", (req, res) => {
+router.post("/login", (req, res) => {
   const { username, password } = req.body;
 
   // Validate from .env
